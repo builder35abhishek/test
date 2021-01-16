@@ -13,16 +13,14 @@ tmp1=/tmp/tmp1.log
 
 function check_rc {
   if [ "$2" != "0" ];then
-    echo "`date "+%Y-%m-%d %H:%M:%S "` $1" | tee -a $log_file
-    echo "$1" | mail -s "Error: Whitelistscript" root@localhost
+    echo "`date "+%Y-%m-%d %H:%M:%S "` $1" >> $log_file
   else
-    echo "`date "+%Y-%m-%d %H:%M:%S "` $1" | tee -a $log_file
-    echo "$1" | mail -s "Whitelistscript" root@localhost
+    echo "`date "+%Y-%m-%d %H:%M:%S "` $3" >> $log_file
   fi
-  
+
 }
 
-## Prerequisites ## 
+## Prerequisites ##
 
 #Check if required files exisits
 if [ ! -f $whitelist ]; then
@@ -46,39 +44,40 @@ fi
 
 ## Main ##
 
-inotifywait -e close_write -m  |
-while :
- do
+#inotifywait -e close_write -m  |
+#while :
+# do
 
   # List currently whitelisted IP
-  grep "\$searchprm" $vhost_conf > $whitelisted_ip
-  sed -i 's/\$searchprm //g' $whitelisted_ip
-  sed 's/\s\+/\n/g' $whitelisted_ip
-  
+  grep "${searchprm}" $vhost_conf > $whitelisted_ip
+  sed -i -e "s/$searchprm //g" -e "s/[[:space:]]//g" $whitelisted_ip
+  sed -i "s/$/\n/g" $whitelisted_ip
+
   # Check if difference whitelisted_ip and whitelist.conf
   diff $whitelisted_ip $whitelist | egrep ">" | awk '{print $2}' > $tmp1
-  check_rc "Error while checking difference" "$?"
-  
+  check_rc "Error while checking difference" "$?" "difference checked successfull"
+
   if [ ! -s $tmp1 ]; then
     echo "`date "+%Y-%m-%d %H:%M:%S "` All IPs are already whitelisted. No any new IP found in $whitelist" >> $log_file
   else
-    echo "Backing up $vhost_conf"
+    echo "`date "+%Y-%m-%d %H:%M:%S "` Backing up $vhost_conf" >> $log_file
     cp -rp $vhost_conf $vhost_conf_bkp_`date "+%Y%m%d_%H%M"`
   fi
-  
+
   # Add new IP in vhost_conf
-  for i in `cat $tmp1` 
+  for i in `cat $tmp1`
   do
-    sed -i '/\$searchprm/ s/$/\$i ' $vhost_conf
-    check_rc "Error while adding IP in $vhost_conf" "$?"
+    sed -i "/$searchprm/ s/$/ $i/ " $vhost_conf
+    check_rc "Error while adding IP in $vhost_conf" "$?" "IP added in $vhost_conf"
     echo "`date "+%Y-%m-%d %H:%M:%S "` Verifying new IP in $vhost_conf" >> $log_file
     if [ "X`grep $i $vhost_conf`" != "X" ]; then
       echo "`date "+%Y-%m-%d %H:%M:%S "` IP $i successfully added in $vhost_conf" >> $log_file
+      echo $i >> $whitelisted_ip
     else
       echo "`date "+%Y-%m-%d %H:%M:%S "` IP $i not added in $vhost_conf" >> $log_file
     fi
   done
-done
+#done
 
 ## End ##
 #########
