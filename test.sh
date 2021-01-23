@@ -8,7 +8,8 @@ searchprm="Require ip"
 whitelisted_ip="/etc/apache2/whitelisted_ip.lst"
 tmp1=/tmp/tmp1.log
 
-
+## Add line1
+## Add line 2
 ## Funtions ##
 
 function check_rc {
@@ -80,4 +81,3 @@ fi
 #done
 
 ## End ##
-#########
